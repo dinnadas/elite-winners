@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// Enable error logging
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/stripe_errors.log');
 
@@ -14,7 +13,6 @@ if (!isset($_SESSION['user_id'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        // Validate and sanitize input
         $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
         $line1 = filter_input(INPUT_POST, 'line1', FILTER_SANITIZE_STRING);
         $line2 = filter_input(INPUT_POST, 'line2', FILTER_SANITIZE_STRING);
@@ -24,17 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $country = filter_input(INPUT_POST, 'country', FILTER_SANITIZE_STRING);
         $save_address = isset($_POST['save_address']) && $_POST['save_address'] === 'on';
 
-        // Validate required fields
         if (empty($name) || empty($line1) || empty($city) || empty($country)) {
             throw new Exception('Name, Address Line 1, City, and Country are required.');
         }
 
-        // Validate country (exclude SH)
         if ($country === 'SH') {
             throw new Exception('Shipping to Saint Helena (SH) is not allowed.');
         }
 
-        // Store shipping address in session
         $shipping_address = [
             'name' => $name,
             'address' => [
@@ -49,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['shipping_address'] = $shipping_address;
         error_log("shipping.php: Shipping address stored in session: " . json_encode($shipping_address, JSON_PRETTY_PRINT));
 
-        // Save to database if requested
         if ($save_address) {
             $stmt = $pdo->prepare("
                 INSERT INTO user_shipping_addresses (user_id, shipping_address)
@@ -65,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Calculate cart count for header
 $user_id = $_SESSION['user_id'];
 try {
     $stmt = $pdo->prepare("SELECT SUM(quantity) as cart_count FROM cart WHERE user_id = ?");
@@ -83,20 +76,15 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipping Address - EliteWinnersWorldwide</title>
-    <!-- OpenGraph meta tags -->
     <meta property="og:title" content="Shipping Address - EliteWinnersWorldwide">
     <meta property="og:description" content="Enter your shipping details to proceed to checkout">
     <meta property="og:image" content="https://example.com/elitewinners-shipping-preview.jpg">
     <meta property="og:url" content="https://elitewinnersworldwide.com/shipping">
     <meta property="og:type" content="website">
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-    <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS and Stripe -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script>
@@ -165,16 +153,13 @@ try {
     </style>
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
-    <!-- Header / Navigation -->
     <header class="fixed w-full z-50 transition-all duration-300" id="header">
         <div class="absolute inset-0 z-0"></div>
         <nav class="container mx-auto px-4 py-4 flex justify-between items-center relative z-20">
-            <!-- Logo -->
             <a href="index.php" class="flex items-center space-x-2 z-60">
                 <img class="logo" src="https://www.kalonoid.com/uploads/logo.png" alt="logo">
                 <span class="text-white font-heading font-bold text-xl hidden md:block">EliteWinnersWorldwide</span>
             </a>
-            <!-- Desktop Navigation -->
             <div class="hidden md:flex items-center space-x-8">
                 <a href="index.php" class="text-white hover:text-eww-gold transition-colors">Home</a>
                 <a href="index.php#services" class="text-white hover:text-eww-gold transition-colors">Services</a>
@@ -190,13 +175,11 @@ try {
                 </a>
                 <a href="logout.php" class="text-white hover:text-eww-gold transition-colors ml-4">Logout</a>
             </div>
-            <!-- Mobile menu button -->
             <button class="md:hidden text-white z-60" id="mobile-menu-button" aria-label="Toggle mobile menu">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
                 </svg>
             </button>
-            <!-- Mobile Navigation -->
             <div class="fixed inset-0 bg-eww-dark bg-opacity-95 z-50 flex flex-col items-center justify-center space-y-8 transform -translate-x-full transition-transform duration-300 md:hidden" id="mobile-menu">
                 <a href="index.php" class="text-white text-2xl font-heading font-semibold hover:text-eww-gold">Home</a>
                 <a href="index.php#services" class="text-white text-2xl font-heading font-semibold hover:text-eww-gold">Services</a>
@@ -212,7 +195,6 @@ try {
         </nav>
     </header>
 
-    <!-- Page Header -->
     <section class="relative pt-32 pb-12">
         <div class="absolute inset-0 z-0">
             <div class="absolute inset-0 hero-gradient z-10"></div>
@@ -239,7 +221,6 @@ try {
         </div>
     </section>
 
-    <!-- Shipping Form Section -->
     <section class="py-12 bg-eww-light">
         <div class="container mx-auto px-4">
             <div class="max-w-lg mx-auto bg-white rounded-2xl shadow-lg p-8 animation-slide-up">
@@ -316,7 +297,6 @@ try {
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="bg-eww-dark text-white py-12">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -401,7 +381,6 @@ try {
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script>
         const stripe = Stripe('<?php echo STRIPE_PUBLISHABLE_KEY; ?>');
         const form = document.getElementById('shippingForm');
@@ -418,7 +397,6 @@ try {
             evt.preventDefault();
             setLoading(true);
 
-            // Validate form fields on client side
             const name = document.getElementById('name').value.trim();
             const line1 = document.getElementById('line1').value.trim();
             const city = document.getElementById('city').value.trim();
@@ -436,7 +414,6 @@ try {
                 return;
             }
 
-            // Submit form data to shipping.php for server-side validation and session storage
             const formData = new FormData(form);
             try {
                 const response = await fetch('shipping.php', {
@@ -451,7 +428,6 @@ try {
                     return;
                 }
 
-                // Call create_session.php to get Stripe session
                 const sessionResponse = await fetch('create_session.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -461,7 +437,6 @@ try {
                 const sessionData = await sessionResponse.json();
 
                 if (sessionData.sessionId) {
-                    // Redirect to Stripe Checkout
                     stripe.redirectToCheckout({ sessionId: sessionData.sessionId })
                         .then(result => {
                             if (result.error) {
@@ -499,10 +474,8 @@ try {
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Set current year in footer
             document.getElementById('current-year').textContent = new Date().getFullYear();
 
-            // Mobile menu toggle
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
 
@@ -511,7 +484,6 @@ try {
                 document.body.classList.toggle('overflow-hidden');
             });
 
-            // Close mobile menu when clicking links
             const mobileMenuLinks = mobileMenu.querySelectorAll('a');
             mobileMenuLinks.forEach(link => {
                 link.addEventListener('click', function() {
@@ -520,7 +492,6 @@ try {
                 });
             });
 
-            // Sticky header
             const header = document.getElementById('header');
             window.addEventListener('scroll', function() {
                 if (window.scrollY > 50) {

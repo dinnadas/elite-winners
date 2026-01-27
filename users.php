@@ -2,20 +2,17 @@
 session_start();
 require_once 'config.php';
 
-// Check if admin is logged in
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// === HANDLE AJAX ACTIONS ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     
     try {
         $pdo->beginTransaction();
 
-        // === DELETE USER ===
         if ($_POST['action'] === 'delete' && !empty($_POST['id'])) {
             $id = (int)$_POST['id'];
             $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
@@ -25,7 +22,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        // === UPDATE USER (EDIT) ===
         if ($_POST['action'] === 'update_user' && !empty($_POST['id'])) {
             $id = (int)$_POST['id'];
             $first_name = trim($_POST['first_name'] ?? '');
@@ -50,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Fetch users with full name
 try {
     $stmt = $pdo->query("SELECT id, first_name, last_name, email, age, phone, created_at FROM users ORDER BY created_at DESC");
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -102,7 +97,6 @@ try {
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar -->
         <aside class="sidebar hidden lg:block lg:w-64 bg-sidebar-bg text-white">
             <div class="flex flex-col h-full">
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
@@ -184,7 +178,6 @@ try {
                         </li>
                     </ul>
                     
-                    <!-- Bottom section -->
                     <div class="mt-10 pt-6 border-t border-gray-700">
                         <a href="logout.php" class="flex items-center px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -197,7 +190,6 @@ try {
             </div>
         </aside>
 
-        <!-- Main Content -->
         <div class="flex-1 overflow-auto">
             <header class="bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 py-4">
@@ -285,7 +277,6 @@ try {
         </div>
     </div>
 
-    <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 class="text-lg font-semibold mb-4">Edit User</h3>

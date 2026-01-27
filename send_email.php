@@ -1,5 +1,4 @@
 <?php
-// send_email.php
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
@@ -12,22 +11,19 @@ function sendBookingStatusEmail($to, $name, $status, $session_type = '', $date =
     $mail = new PHPMailer(true);
 
     try {
-        // === GMAIL SMTP (CHANGE THESE) ===
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'your-email@gmail.com';     // YOUR GMAIL
-        $mail->Password   = 'your-app-password';        // 16-char App Password
+        $mail->Username   = 'email'; 
+        $mail->Password   = 'password';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
 
-        // === EMAIL SETUP ===
         $mail->setFrom('no-reply@elitewinnersworldwide.com', 'EliteWinners');
         $mail->addAddress($to, $name);
         $mail->addReplyTo('support@elitewinnersworldwide.com', 'Support');
         $mail->isHTML(true);
 
-        // === CONTENT ===
         if ($status === 'Confirmed') {
             $mail->Subject = "Your EliteWinners Session is Confirmed!";
             $mail->Body = "

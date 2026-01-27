@@ -2,20 +2,17 @@
 session_start();
 require_once 'config.php';
 
-// Check if admin is logged in
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// Handle form submission for adding a new testimonial
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_testimonial'])) {
     $full_name = trim($_POST['full_name'] ?? '');
     $role = trim($_POST['role'] ?? '');
     $quote = trim($_POST['quote'] ?? '');
     $avatar_image = '';
 
-    // Handle file upload
     if (isset($_FILES['avatar_image']) && $_FILES['avatar_image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = 'uploads/';
         if (!is_dir($upload_dir)) {
@@ -27,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_testimonial'])) {
         }
     }
 
-    // Validate inputs
     if ($full_name && $role && $quote && $avatar_image) {
         try {
             $stmt = $pdo->prepare("INSERT INTO testimonials (avatar_image, full_name, role, quote) VALUES (:avatar_image, :full_name, :role, :quote)");
@@ -48,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_testimonial'])) {
     }
 }
 
-// Handle form submission for editing a testimonial
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_testimonial'])) {
     $id = (int)$_POST['id'];
     $full_name = trim($_POST['full_name'] ?? '');
@@ -56,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_testimonial'])) 
     $quote = trim($_POST['quote'] ?? '');
     $avatar_image = $_POST['existing_avatar'] ?? '';
 
-    // Handle new file upload if provided
     if (isset($_FILES['avatar_image']) && $_FILES['avatar_image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = 'uploads/';
         if (!is_dir($upload_dir)) {
@@ -64,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_testimonial'])) 
         }
         $new_avatar = $upload_dir . time() . '_' . basename($_FILES['avatar_image']['name']);
         if (move_uploaded_file($_FILES['avatar_image']['tmp_name'], $new_avatar)) {
-            // Delete old image if exists
             if ($avatar_image && file_exists($avatar_image)) {
                 unlink($avatar_image);
             }
@@ -74,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_testimonial'])) 
         }
     }
 
-    // Validate inputs
     if ($id && $full_name && $role && $quote && $avatar_image) {
         try {
             $stmt = $pdo->prepare("UPDATE testimonials SET avatar_image = :avatar_image, full_name = :full_name, role = :role, quote = :quote, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
@@ -96,7 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_testimonial'])) 
     }
 }
 
-// Handle deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_testimonial'])) {
     $id = (int)$_POST['delete_id'];
     try {
@@ -105,7 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_testimonial'])
         $testimonial = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($testimonial) {
-            // Delete image file if exists
             if ($testimonial['avatar_image'] && file_exists($testimonial['avatar_image'])) {
                 unlink($testimonial['avatar_image']);
             }
@@ -123,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_testimonial'])
     }
 }
 
-// Fetch testimonials data
 try {
     $stmt = $pdo->query("SELECT id, avatar_image, full_name, role, quote, created_at FROM testimonials ORDER BY created_at DESC");
     $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -132,7 +121,6 @@ try {
     $error = "Error fetching testimonials: " . $e->getMessage();
 }
 
-// Fetch specific testimonial for editing if needed
 $edit_testimonial = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $id = (int)$_GET['edit'];
@@ -147,11 +135,8 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Testimonials - EliteWinnersWorldwide</title>
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -196,7 +181,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         h1, h2, h3, h4, h5, h6 {
             font-family: 'Montserrat', sans-serif;
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -210,11 +194,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         ::-webkit-scrollbar-thumb:hover {
             background: #0B7A4D;
         }
-        /* Sidebar transition */
         .sidebar {
             transition: all 0.3s ease;
         }
-        /* Mobile menu backdrop */
         .mobile-menu-backdrop {
             background-color: rgba(0, 0, 0, 0.5);
         }
@@ -222,12 +204,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     </style>
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
-    <!-- Dashboard Container -->
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar - Desktop -->
         <aside class="sidebar hidden lg:block lg:w-64 bg-sidebar-bg text-white">
             <div class="flex flex-col h-full">
-                <!-- Logo -->
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
                     <div class="flex items-center">
                         <img class="logo" src="logo.png" alt="logo">
@@ -235,7 +214,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                     </div>
                 </div>
                 
-                <!-- Navigation -->
                 <nav class="flex-1 px-4 py-6 overflow-y-auto">
                     <ul class="space-y-2">
                         <li>
@@ -309,7 +287,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                         </li>
                     </ul>
                     
-                    <!-- Bottom section -->
                     <div class="mt-10 pt-6 border-t border-gray-700">
                         <a href="#" class="flex items-center px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -322,12 +299,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             </div>
         </aside>
 
-        <!-- Main Content -->
         <div class="flex-1 overflow-auto">
-            <!-- Top Bar -->
             <header class="bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 py-4">
-                    <!-- Left section -->
                     <div class="flex items-center">
                         <button id="mobile-menu-button" class="lg:hidden text-gray-500 mr-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -342,7 +316,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                         </div>
                     </div>
                     
-                    <!-- Right section -->
                     <div class="flex items-center space-x-4">
                         <button class="relative p-1 text-gray-500 hover:text-eww-dark">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -363,7 +336,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                 </svg>
                             </button>
                             
-                            <!-- User dropdown -->
                             <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-10 border border-gray-200">
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
@@ -375,22 +347,18 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 </div>
             </header>
 
-            <!-- Main Content Area -->
             <main class="p-6">
-                <!-- Page Title -->
                 <div class="mb-6">
                     <h1 class="text-2xl font-heading font-bold">Testimonials</h1>
                     <p class="text-gray-600">Manage testimonials for EliteWinnersWorldwide.</p>
                 </div>
                 
-                <!-- Add Testimonial Button -->
                 <div class="mb-6">
                     <button id="add-testimonial-button" class="bg-eww-green text-white px-4 py-2 rounded-lg hover:bg-eww-dark transition-colors">
                         Add Testimonial
                     </button>
                 </div>
 
-                <!-- Success/Error Messages -->
                 <?php if (isset($_GET['success'])): ?>
                     <div class="mb-6 p-4 bg-green-100 text-green-700 rounded-lg">
                         <?php 
@@ -407,7 +375,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                     </div>
                 <?php endif; ?>
                 
-                <!-- Testimonials Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <?php if (empty($testimonials)): ?>
                         <div class="col-span-full text-center text-gray-500 p-6">
@@ -436,7 +403,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         </div>
     </div>
 
-    <!-- Add Testimonial Modal -->
     <div id="add-testimonial-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
             <div class="flex justify-between items-center mb-4">
@@ -472,7 +438,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         </div>
     </div>
 
-    <!-- Edit Testimonial Modal -->
     <?php if ($edit_testimonial): ?>
     <div id="edit-testimonial-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
@@ -512,12 +477,10 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         </div>
     </div>
     <script>
-        // Auto-open edit modal if ?edit=ID is in URL
         document.getElementById('edit-testimonial-modal').classList.remove('hidden');
     </script>
     <?php endif; ?>
 
-    <!-- Delete Confirmation Modal -->
     <div id="delete-testimonial-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
             <div class="flex justify-between items-center mb-4">
@@ -539,7 +502,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         </div>
     </div>
 
-    <!-- Mobile Menu (hidden by default) -->
     <div id="mobile-menu" class="fixed inset-0 z-50 hidden">
         <div class="mobile-menu-backdrop absolute inset-0 bg-black opacity-50" id="backdrop"></div>
         <div class="absolute left-0 top-0 bottom-0 w-64 bg-sidebar-bg text-white transform transition-transform duration-300 ease-in-out -translate-x-full" id="mobile-sidebar">
@@ -572,11 +534,8 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         </div>
     </div>
 
-    <!-- JavaScript -->
     <script>
-        // DOM Ready
         document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu functionality
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
             const mobileSidebar = document.getElementById('mobile-sidebar');
@@ -601,7 +560,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
             backdrop.addEventListener('click', closeMobileMenuFunc);
             
-            // User dropdown functionality
             const userMenuButton = document.getElementById('user-menu-button');
             const userDropdown = document.getElementById('user-dropdown');
             
@@ -609,14 +567,12 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 userDropdown.classList.toggle('hidden');
             });
             
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(event) {
                 if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
                     userDropdown.classList.add('hidden');
                 }
             });
 
-            // Add Modal functionality
             const addTestimonialButton = document.getElementById('add-testimonial-button');
             const addTestimonialModal = document.getElementById('add-testimonial-modal');
             const closeAddModalButton = document.getElementById('close-add-modal-button');
@@ -634,21 +590,19 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             closeAddModalButton.addEventListener('click', closeAddModal);
             cancelAddModalButton.addEventListener('click', closeAddModal);
 
-            // Edit Modal functionality (if edit modal exists)
             const editTestimonialModal = document.getElementById('edit-testimonial-modal');
             if (editTestimonialModal) {
                 const closeEditModalButton = document.getElementById('close-edit-modal-button');
                 const cancelEditModalButton = document.getElementById('cancel-edit-modal-button');
 
                 closeEditModalButton.addEventListener('click', () => {
-                    window.location.href = 'testimonials.php'; // Redirect to refresh and close
+                    window.location.href = 'testimonials.php'; 
                 });
                 cancelEditModalButton.addEventListener('click', () => {
-                    window.location.href = 'testimonials.php'; // Redirect to refresh and close
+                    window.location.href = 'testimonials.php'; 
                 });
             }
 
-            // Delete Modal functionality
             const deleteTestimonialModal = document.getElementById('delete-testimonial-modal');
             const closeDeleteModalButton = document.getElementById('close-delete-modal-button');
             const cancelDeleteModalButton = document.getElementById('cancel-delete-modal-button');

@@ -2,13 +2,11 @@
 session_start();
 require_once 'config.php';
 
-// Check if admin is logged in
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// Handle Clear Data request
 if (isset($_POST['clear_data'])) {
     try {
         $stmt = $pdo->prepare("DELETE FROM site_visitors");
@@ -20,7 +18,6 @@ if (isset($_POST['clear_data'])) {
     }
 }
 
-// Fetch all site visitors
 try {
     $stmt = $pdo->query("SELECT ip_address, country_name, visit_date FROM site_visitors ORDER BY visit_date DESC");
     $visitors = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -35,11 +32,8 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Site Visitors - EliteWinnersWorldwide</title>
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -107,12 +101,9 @@ try {
     </style>
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
-    <!-- Dashboard Container -->
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar - Desktop -->
         <aside class="sidebar hidden lg:block lg:w-64 bg-sidebar-bg text-white">
             <div class="flex flex-col h-full">
-                <!-- Logo -->
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
                     <div class="flex items-center">
                         <img class="logo" src="logo.png" alt="logo">
@@ -120,7 +111,6 @@ try {
                     </div>
                 </div>
                 
-                <!-- Navigation -->
                 <nav class="flex-1 px-4 py-6 overflow-y-auto">
                     <ul class="space-y-2">
                         <li>
@@ -194,7 +184,6 @@ try {
                         </li>
                     </ul>
                     
-                    <!-- Bottom section -->
                     <div class="mt-10 pt-6 border-t border-gray-700">
                         <a href="#" class="flex items-center px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,12 +196,9 @@ try {
             </div>
         </aside>
 
-        <!-- Main Content -->
         <div class="flex-1 overflow-auto">
-            <!-- Top Bar -->
             <header class="bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 py-4">
-                    <!-- Left section -->
                     <div class="flex items-center">
                         <button id="mobile-menu-button" class="lg:hidden text-gray-500 mr-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -227,7 +213,6 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Right section -->
                     <div class="flex items-center space-x-4">
                         <button class="relative p-1 text-gray-500 hover:text-eww-dark">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -248,7 +233,6 @@ try {
                                 </svg>
                             </button>
                             
-                            <!-- User dropdown -->
                             <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-10 border border-gray-200">
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
@@ -260,22 +244,18 @@ try {
                 </div>
             </header>
 
-            <!-- Main Content Area -->
             <main class="p-6">
-                <!-- Page Title -->
                 <div class="mb-6">
                     <h1 class="text-2xl font-heading font-bold">Site Visitors</h1>
                     <p class="text-gray-600">List of all site visitors with their IP address and country.</p>
                 </div>
 
-                <!-- Action Buttons -->
                 <div class="mb-6">
                     <form method="POST" onsubmit="return confirm('Are you sure you want to clear all visitor data?');">
                         <button type="submit" name="clear_data" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Clear Data</button>
                     </form>
                 </div>
 
-                <!-- Error/Success Message -->
                 <?php if (isset($error)): ?>
                     <div class="mb-6 p-4 bg-red-100 text-red-700 rounded-lg">
                         <?php echo htmlspecialchars($error); ?>
@@ -286,7 +266,6 @@ try {
                     </div>
                 <?php endif; ?>
 
-                <!-- Visitors Table -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
                     <div class="px-6 py-4 border-b border-gray-100">
                         <h2 class="text-lg font-semibold">Visitor Records</h2>
@@ -322,7 +301,6 @@ try {
         </div>
     </div>
 
-    <!-- Mobile Menu (hidden by default) -->
     <div id="mobile-menu" class="fixed inset-0 z-50 hidden">
         <div class="mobile-menu-backdrop absolute inset-0 bg-black opacity-50" id="backdrop"></div>
         <div class="absolute left-0 top-0 bottom-0 w-64 bg-sidebar-bg text-white transform transition-transform duration-300 ease-in-out -translate-x-full" id="mobile-sidebar">
@@ -356,11 +334,8 @@ try {
         </div>
     </div>
 
-    <!-- JavaScript -->
     <script>
-        // DOM Ready
         document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu functionality
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
             const mobileSidebar = document.getElementById('mobile-sidebar');
@@ -385,7 +360,6 @@ try {
             closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
             backdrop.addEventListener('click', closeMobileMenuFunc);
             
-            // User dropdown functionality
             const userMenuButton = document.getElementById('user-menu-button');
             const userDropdown = document.getElementById('user-dropdown');
             
@@ -393,7 +367,6 @@ try {
                 userDropdown.classList.toggle('hidden');
             });
             
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(event) {
                 if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
                     userDropdown.classList.add('hidden');

@@ -1,12 +1,11 @@
 <?php
 require_once 'config.php';
-require_once 'vendor/autoload.php'; // PHPMailer
+require_once 'vendor/autoload.php'; 
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 function sendOrderEmail($pdo, $order_id, $status, $failure_reason = null) {
-    // Fetch order details
     $stmt = $pdo->prepare("
         SELECT o.id, o.user_id, o.total, o.created_at, o.shipping_address, o.payment_status,
                u.first_name, u.last_name, u.email
@@ -22,7 +21,6 @@ function sendOrderEmail($pdo, $order_id, $status, $failure_reason = null) {
         return false;
     }
 
-    // Fetch order items
     $stmt = $pdo->prepare("
         SELECT oi.quantity, oi.price, oi.discount_percent, oi.variant_price_delta, oi.chip_selections,
                p.title
@@ -33,7 +31,6 @@ function sendOrderEmail($pdo, $order_id, $status, $failure_reason = null) {
     $stmt->execute([$order_id]);
     $order_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format order details
     $order_details = '';
     $subtotal = 0;
     foreach ($order_items as $item) {
@@ -47,19 +44,17 @@ function sendOrderEmail($pdo, $order_id, $status, $failure_reason = null) {
     $order_details .= "<li>Shipping: $" . number_format($shipping_price, 2) . "</li>";
     $order_details .= "<li><strong>Total: $" . number_format($order['total'], 2) . "</strong></li>";
 
-    // Initialize PHPMailer
     $mail = new PHPMailer(true);
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'kalonoidcom@gmail.com';
-    $mail->Password = 'bglc wcdf rgke heqj';
+    $mail->Username = 'email';
+    $mail->Password = 'password';
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
     $mail->Port = 465;
-    $mail->setFrom('info@kalonoid.com', 'EliteWinnersWorldwide');
+    $mail->setFrom('info@domain.com', 'EliteWinnersWorldwide');
 
     try {
-        // User Email
         $mail->addAddress($order['email'], "{$order['first_name']} {$order['last_name']}");
         $mail->isHTML(true);
 
@@ -100,7 +95,6 @@ function sendOrderEmail($pdo, $order_id, $status, $failure_reason = null) {
         $mail->send();
         error_log("send_order_email.php: User email sent for order ID $order_id, status: $status");
 
-        // Admin Email
         $mail->clearAddresses();
         $mail->addAddress('dinaolenku@gmail.com', 'Admin');
         $shipping_address = json_decode($order['shipping_address'], true);
