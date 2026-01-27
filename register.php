@@ -17,7 +17,6 @@ $google_client->addScope('profile');
 
 $google_auth_url = $google_client->createAuthUrl();
 
-// Handle Google Callback
 if (isset($_GET['code'])) {
     $token = $google_client->fetchAccessTokenWithAuthCode($_GET['code']);
     if (isset($token['error'])) {
@@ -31,18 +30,15 @@ if (isset($_GET['code'])) {
         $first_name = $google_account_info->givenName;
         $last_name = $google_account_info->familyName;
 
-        // Check if user exists
         $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
         if ($user) {
-            // Login
             $_SESSION['user_id'] = $user['id'];
             header("Location: index.php");
             exit;
         } else {
-            // Store Google data in session and redirect to age input step
             $_SESSION['google_data'] = [
                 'first_name' => $first_name,
                 'last_name' => $last_name,
@@ -54,7 +50,6 @@ if (isset($_GET['code'])) {
     }
 }
 
-// Handle Google age submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['google_finish'])) {
     if (!isset($_SESSION['google_data'])) {
         $error = "Session data missing. Please try again.";
@@ -66,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['google_finish'])) {
         if ($age < 8 || $age > 25) {
             $error = "Age must be between 8 and 25.";
         } else {
-            $password = bin2hex(random_bytes(16)); // Random password for Google users
+            $password = bin2hex(random_bytes(16)); 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO users (first_name, last_name, age, email, phone, password, verified) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$data['first_name'], $data['last_name'], $age, $data['email'], $phone ?: null, $hashed_password, 1]);
@@ -78,10 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['google_finish'])) {
     }
 }
 
-// Check if user is logged in
 $is_logged_in = isset($_SESSION['user_id']);
 
-// Fetch cart count for logged-in user
 $cart_count = 0;
 if ($is_logged_in) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM cart WHERE user_id = ?");
@@ -89,7 +82,6 @@ if ($is_logged_in) {
     $cart_count = $stmt->fetchColumn();
 }
 
-// Handle registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $first_name = trim($_POST['first_name']);
     $last_name = trim($_POST['last_name']);
@@ -114,18 +106,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
             $stmt = $pdo->prepare("INSERT INTO users (first_name, last_name, age, email, phone, password, otp, verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$first_name, $last_name, $age, $email, $phone, $hashed_password, $otp, 0]);
 
-            // Send OTP email
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com'; // Update with your SMTP host
+                $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'kalonoidcom@gmail.com'; // Update with your email
-                $mail->Password = 'bglc wcdf rgke heqj'; // Update with your password
+                $mail->Username = 'YOUR-EMAIL';
+                $mail->Password = 'PASSWORD';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
                 $mail->Port = 465;
 
-                $mail->setFrom('info@kalonoid.com', 'EliteWinnersWorldwide');
+                $mail->setFrom('info@domain.com', 'EliteWinnersWorldwide');
                 $mail->addAddress($email);
                 $mail->isHTML(true);
                 $mail->Subject = 'Your OTP for Registration';
@@ -143,7 +134,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     }
 }
 
-// Handle OTP verification
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp']) && isset($_SESSION['email'])) {
     $otp = trim($_POST['otp']);
     $email = $_SESSION['email'];
@@ -164,7 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp']) && isse
     }
 }
 
-// Handle login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
@@ -237,16 +226,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     </style>
 </head>
 <body class="bg-eww-dark text-eww-dark font-body">
-    <!-- Header / Navigation -->
     <header class="fixed w-full z-50 transition-all duration-300" id="header">
         <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <!-- Logo -->
             <a href="index.php" class="flex items-center space-x-2 z-60">
                 <img class="logo" src="logo.png" alt="logo">
                 <span class="text-white font-heading font-bold text-xl hidden md:block">EliteWinnersWorldwide</span>
             </a>
 
-            <!-- Desktop Navigation -->
             <div class="hidden md:flex items-center space-x-8">
                 <a href="index.php#home" class="text-white hover:text-eww-gold transition-colors">Home</a>
                 <a href="index.php#services" class="text-white hover:text-eww-gold transition-colors">Services</a>
@@ -265,14 +251,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 <?php endif; ?>
             </div>
 
-            <!-- Mobile menu button -->
             <button class="md:hidden text-white z-60" id="mobile-menu-button" aria-label="Toggle mobile menu">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
                 </svg>
             </button>
 
-            <!-- Mobile Navigation -->
             <div class="fixed inset-0 bg-eww-dark bg-opacity-95 z-50 flex flex-col items-center justify-center space-y-8 transform -translate-x-full transition-transform duration-300 md:hidden" id="mobile-menu">
                 <a href="index.php#home" class="text-white text-2xl font-heading font-semibold hover:text-eww-gold">Home</a>
                 <a href="index.php#services" class="text-white text-2xl font-heading font-semibold hover:text-eww-gold">Services</a>
@@ -290,7 +274,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         </nav>
     </header>
 
-    <!-- Main Content -->
     <section class="relative min-h-screen pt-24 pb-12 flex items-center justify-center bg-eww-dark overflow-hidden">
         <div class="absolute inset-0 z-0">
             <div class="absolute inset-0 hero-gradient z-10"></div>
@@ -299,7 +282,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         </div>
         <div class="container mx-auto px-4 z-20 max-w-md">
             <?php if (isset($_GET['step']) && $_GET['step'] === 'verify' && isset($_SESSION['otp_sent'])): ?>
-                <!-- OTP Verification Form -->
                 <div class="blurred-container rounded-2xl shadow-lg p-8 text-white">
                     <h2 class="text-2xl font-heading font-bold mb-6 text-center">Verify Your Account</h2>
                     <?php if (isset($error)): ?>
@@ -322,7 +304,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     </form>
                 </div>
             <?php elseif (isset($_GET['step']) && $_GET['step'] === 'google_age' && isset($_SESSION['google_data'])): ?>
-                <!-- Google Age Input Form -->
                 <div class="blurred-container rounded-2xl shadow-lg p-8 text-white">
                     <h2 class="text-2xl font-heading font-bold mb-6 text-center">Complete Your Profile</h2>
                     <?php if (isset($error)): ?>
@@ -348,7 +329,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     </form>
                 </div>
             <?php else: ?>
-                <!-- Registration/Login Toggle -->
                 <div class="blurred-container rounded-2xl shadow-lg p-8 text-white">
                     <div class="flex justify-center mb-6">
                         <button id="register-tab" class="px-4 py-2 font-semibold border-b-2 border-eww-gold text-eww-gold">Sign Up</button>
@@ -364,7 +344,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                             </button>
                         </div>
                     <?php endif; ?>
-                    <!-- Registration Form -->
                     <form id="register-form" method="POST">
                         <input type="hidden" name="register" value="1">
                         <div id="step1">
@@ -418,7 +397,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                             <button type="button" onclick="nextStep(2)" class="w-full text-gray-400 py-3">Back</button>
                         </div>
                     </form>
-                    <!-- Login Form -->
                     <form id="login-form" class="hidden" method="POST">
                         <div class="mb-4">
                             <label for="login_email" class="block text-sm font-medium mb-1">Email Address</label>
@@ -444,7 +422,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="bg-eww-dark text-white py-12">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -525,7 +502,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <script>
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // Navbar scroll effect
         window.addEventListener('scroll', function() {
             const header = document.getElementById('header');
             if (window.scrollY > 50) {
@@ -535,7 +511,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             }
         });
 
-        // Mobile menu toggle
         const mobileMenuButton = document.getElementById('mobile-menu-button');
         const mobileMenu = document.getElementById('mobile-menu');
         mobileMenuButton.addEventListener('click', function() {
@@ -549,7 +524,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             });
         });
 
-        // Form toggle
         const registerTab = document.getElementById('register-tab');
         const loginTab = document.getElementById('login-tab');
         const registerForm = document.getElementById('register-form');
@@ -573,7 +547,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             });
         }
 
-        // Multi-step form
         function nextStep(step) {
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.add('hidden');
