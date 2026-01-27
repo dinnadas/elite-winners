@@ -2,18 +2,15 @@
 session_start();
 require_once 'config.php';
 
-// Check if admin is logged in
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// === RESET TEST DATA LOGIC (TOTAL WIPE + PAID ORDERS) ===
 if (isset($_POST['reset_test_data']) && isset($_SESSION['admin_id'])) {
     try {
         $pdo->beginTransaction();
 
-        // === DELETE ALL PAID ORDERS & ITEMS (DEV CLEAN SLATE) ===
         $pdo->exec("
             DELETE oi FROM order_items oi 
             INNER JOIN orders o ON oi.order_id = o.id 
@@ -21,15 +18,12 @@ if (isset($_POST['reset_test_data']) && isset($_SESSION['admin_id'])) {
         ");
         $pdo->exec("DELETE FROM orders WHERE payment_status = 'paid'");
 
-        // === DELETE ALL PENDING ORDERS (OPTIONAL) ===
         $pdo->exec("DELETE FROM order_items");
         $pdo->exec("DELETE FROM orders");
 
-        // === TRUNCATE BOOKINGS & VISITORS ===
         $pdo->exec("TRUNCATE TABLE bookings");
         $pdo->exec("TRUNCATE TABLE site_visitors");
 
-        // === CLEAR WEBHOOKS ===
         $tables = $pdo->query("SHOW TABLES LIKE 'webhook_events'")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('webhook_events', $tables)) {
             $pdo->exec("TRUNCATE TABLE webhook_events");
@@ -45,7 +39,6 @@ if (isset($_POST['reset_test_data']) && isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// Fetch total bookings count
 try {
     $stmt = $pdo->query("SELECT COUNT(*) as total FROM bookings");
     $totalBookings = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
@@ -53,7 +46,6 @@ try {
     $totalBookings = 'Error';
 }
 
-// Fetch total site visitors count
 try {
     $stmt = $pdo->query("SELECT COUNT(*) as total FROM site_visitors");
     $totalVisitors = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
@@ -61,7 +53,6 @@ try {
     $totalVisitors = 'Error';
 }
 
-// === TOTAL PRODUCTS SOLD START ===
 try {
     $stmt = $pdo->query("
         SELECT COALESCE(SUM(oi.quantity), 0) AS total
@@ -73,9 +64,7 @@ try {
 } catch (PDOException $e) {
     $totalSold = 'Error';
 }
-// === TOTAL PRODUCTS SOLD END ===
 
-// === TOTAL REVENUE (NOW 100% CORRECT) ===
 try {
     $stmt = $pdo->query("
         SELECT COALESCE(SUM(oi.quantity * oi.price_at_purchase), 0)
@@ -88,7 +77,6 @@ try {
     $totalRevenue = '0.00';
 }
 
-// === PRODUCT SALES CHART DATA START ===
 try {
     $stmt = $pdo->prepare("
         SELECT p.title, COALESCE(SUM(oi.quantity), 0) AS units_sold
@@ -112,9 +100,7 @@ try {
     $salesLabels = ['Error'];
     $salesValues = [0];
 }
-// === PRODUCT SALES CHART DATA END ===
 
-// Fetch weekly bookings data (last 7 days)
 try {
     $weeklyBookings = [];
     $labels = [];
@@ -132,7 +118,6 @@ try {
     $labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 }
 
-// === SESSION TYPES PIE CHART DATA (REAL FROM DB) ===
 try {
     $stmt = $pdo->query("
         SELECT session_type, COUNT(*) as count
@@ -145,11 +130,11 @@ try {
     $sessionLabels = [];
     $sessionValues = [];
     $sessionColors = [
-        '#0B7A4D', // One-on-One
-        '#D4AF37', // Group
-        '#1A1A1A', // Goalkeeper
-        '#3B82F6', // Pro Prep
-        '#EF4444', // Fallback
+        '#0B7A4D', 
+        '#D4AF37', 
+        '#1A1A1A', 
+        '#3B82F6', 
+        '#EF4444', 
         '#10B981',
         '#F59E0B',
         '#8B5CF6'
@@ -160,7 +145,6 @@ try {
         $sessionValues[] = (int)$row['count'];
     }
 
-    // Use dynamic colors
     $sessionBgColors = array_slice($sessionColors, 0, count($sessionData));
     if (count($sessionBgColors) < count($sessionData)) {
         $sessionBgColors = array_merge($sessionBgColors, array_fill(0, count($sessionData) - count($sessionBgColors), '#94A3B8'));
@@ -172,7 +156,6 @@ try {
     $sessionBgColors = ['#EF4444'];
 }
 
-// Fetch recent bookings (last 5)
 try {
     $stmt = $pdo->query("SELECT name, email, phone, age, session_type, preferred_date FROM bookings ORDER BY created_at DESC LIMIT 5");
     $recentBookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -186,13 +169,9 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - EliteWinnersWorldwide</title>
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -237,7 +216,6 @@ try {
         h1, h2, h3, h4, h5, h6 {
             font-family: 'Montserrat', 'sans-serif';
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -251,17 +229,14 @@ try {
         ::-webkit-scrollbar-thumb:hover {
             background: #0B7A4D;
         }
-        /* Chart container responsive */
         .chart-container {
             position: relative;
             height: 250px;
             width: 100%;
         }
-        /* Sidebar transition */
         .sidebar {
             transition: all 0.3s ease;
         }
-        /* Mobile menu backdrop */
         .mobile-menu-backdrop {
             background-color: rgba(0, 0, 0, 0.5);
         }
@@ -269,12 +244,9 @@ try {
     </style>
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
-    <!-- Dashboard Container -->
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar - Desktop -->
         <aside class="sidebar hidden lg:block lg:w-64 bg-sidebar-bg text-white">
             <div class="flex flex-col h-full">
-                <!-- Logo -->
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
                     <div class="flex items-center">
                         <img class="logo" src="logo.png" alt="logo">
@@ -282,7 +254,6 @@ try {
                     </div>
                 </div>
                 
-                <!-- Navigation -->
                 <nav class="flex-1 px-4 py-6 overflow-y-auto">
                     <ul class="space-y-2">
                         <li>
@@ -356,7 +327,6 @@ try {
                         </li>
                     </ul>
                     
-                    <!-- Bottom section -->
                     <div class="mt-10 pt-6 border-t border-gray-700">
                         <a href="#" class="flex items-center px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -369,12 +339,9 @@ try {
             </div>
         </aside>
 
-        <!-- Main Content -->
         <div class="flex-1 overflow-auto">
-            <!-- Top Bar -->
             <header class="bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 py-4">
-                    <!-- Left section -->
                     <div class="flex items-center">
                         <button id="mobile-menu-button" class="lg:hidden text-gray-500 mr-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -389,7 +356,6 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Right section -->
                     <div class="flex items-center space-x-4">
                         <button class="relative p-1 text-gray-500 hover:text-eww-dark">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -410,7 +376,6 @@ try {
                                 </svg>
                             </button>
                             
-                            <!-- User dropdown -->
                             <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-10 border border-gray-200">
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
@@ -422,9 +387,7 @@ try {
                 </div>
             </header>
 
-            <!-- Main Content Area -->
             <main class="p-6">
-                <!-- Success / Error Messages -->
                 <?php if (isset($_SESSION['success_message'])): ?>
                     <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
                         <?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?>
@@ -436,7 +399,6 @@ try {
                     </div>
                 <?php endif; ?>
 
-                <!-- Clear Test Data Button -->
                 <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div class="flex items-center justify-between">
                         <div>
@@ -452,15 +414,12 @@ try {
                     </div>
                 </div>
 
-                <!-- Page Title -->
                 <div class="mb-6">
                     <h1 class="text-2xl font-heading font-bold">Dashboard Overview</h1>
                     <p class="text-gray-600">Welcome back, <?php echo htmlspecialchars($_SESSION['admin_name']); ?>! Here's what's happening with your business today.</p>
                 </div>
                 
-                <!-- Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <!-- Total Bookings -->
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                         <div class="flex items-center">
                             <div class="p-3 rounded-lg bg-eww-green-light">
@@ -480,7 +439,6 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Site Visitors -->
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                         <div class="flex items-center">
                             <div class="p-3 rounded-lg bg-eww-gold-light">
@@ -500,7 +458,6 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Products Sold -->
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                         <div class="flex items-center">
                             <div class="p-3 rounded-lg bg-purple-100">
@@ -520,7 +477,6 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Revenue -->
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
                         <div class="flex items-center">
                             <div class="p-3 rounded-lg bg-blue-100">
@@ -541,9 +497,7 @@ try {
                     </div>
                 </div>
                 
-                <!-- Charts Section -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- Bookings Chart -->
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <h2 class="text-lg font-semibold mb-4">Weekly Bookings</h2>
                         <div class="chart-container">
@@ -551,7 +505,6 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Sales Chart -->
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <h2 class="text-lg font-semibold mb-4">Product Sales</h2>
                         <div class="chart-container">
@@ -560,7 +513,6 @@ try {
                     </div>
                 </div>
                 
-                <!-- Session Types Chart -->
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
                     <h2 class="text-lg font-semibold mb-4">Session Types Distribution</h2>
                     <div class="chart-container">
@@ -568,7 +520,6 @@ try {
                     </div>
                 </div>
                 
-                <!-- Recent Bookings Table -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
                     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <h2 class="text-lg font-semibold">Recent Bookings</h2>
@@ -594,13 +545,11 @@ try {
                                 <?php else: ?>
                                     <?php foreach ($recentBookings as $booking): ?>
                                         <?php
-                                        // Generate initials from name
                                         $words = explode(' ', trim($booking['name']));
                                         $initials = '';
                                         foreach (array_slice($words, 0, 2) as $word) {
                                             $initials .= strtoupper(substr($word, 0, 1));
                                         }
-                                        // Format preferred date
                                         $preferredDate = $booking['preferred_date'] ? (new DateTime($booking['preferred_date']))->format('M d, Y') : 'Not specified';
                                         ?>
                                         <tr>
@@ -642,7 +591,6 @@ try {
         </div>
     </div>
 
-    <!-- Mobile Menu (hidden by default) -->
     <div id="mobile-menu" class="fixed inset-0 z-50 hidden">
         <div class="mobile-menu-backdrop absolute inset-0 bg-black opacity-50" id="backdrop"></div>
         <div class="absolute left-0 top-0 bottom-0 w-64 bg-sidebar-bg text-white transform transition-transform duration-300 ease-in-out -translate-x-full" id="mobile-sidebar">
@@ -676,11 +624,8 @@ try {
         </div>
     </div>
 
-    <!-- JavaScript -->
     <script>
-        // DOM Ready
         document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu functionality
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
             const mobileSidebar = document.getElementById('mobile-sidebar');
@@ -705,7 +650,6 @@ try {
             closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
             backdrop.addEventListener('click', closeMobileMenuFunc);
             
-            // User dropdown functionality
             const userMenuButton = document.getElementById('user-menu-button');
             const userDropdown = document.getElementById('user-dropdown');
             
@@ -713,14 +657,12 @@ try {
                 userDropdown.classList.toggle('hidden');
             });
             
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(event) {
                 if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
                     userDropdown.classList.add('hidden');
                 }
             });
             
-            // Initialize charts
             const bookingsCtx = document.getElementById('bookingsChart').getContext('2d');
             const bookingsChart = new Chart(bookingsCtx, {
                 type: 'line',
@@ -779,7 +721,6 @@ try {
                 }
             });
             
-            // === SESSION TYPES CHART (REAL DATA) ===
             const sessionCtx = document.getElementById('sessionChart').getContext('2d');
             const sessionChart = new Chart(sessionCtx, {
                 type: 'doughnut',

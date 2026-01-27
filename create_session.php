@@ -6,14 +6,11 @@ require_once 'vendor/autoload.php';
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
 
-// Set Stripe API key
 Stripe::setApiKey(STRIPE_SECRET_KEY);
 
-// Enable error logging
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/stripe_errors.log');
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     error_log("create_session.php: User not logged in");
     header('Content-Type: application/json');
@@ -23,7 +20,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Fetch cart items with stock
 $stmt = $pdo->prepare("
     SELECT c.product_id, c.quantity, c.chip_selections, c.variant_price_delta,
            p.title, p.price, p.discount_percent, p.shipping_price, p.stock
@@ -41,7 +37,6 @@ if (empty($cart_items)) {
     exit;
 }
 
-// Validate stock
 foreach ($cart_items as $item) {
     if ($item['quantity'] > $item['stock']) {
         error_log("create_session.php: Insufficient stock for product_id: {$item['product_id']}, requested: {$item['quantity']}, available: {$item['stock']}");
@@ -51,7 +46,6 @@ foreach ($cart_items as $item) {
     }
 }
 
-// === CALCULATE TOTAL, DISCOUNTS, SHIPPING ===
 $line_items = [];
 $subtotal_before_discount = 0;
 $discount_amount = 0;
@@ -94,7 +88,6 @@ foreach ($cart_items as $item) {
 
 $final_total = $subtotal_before_discount - $discount_amount + $shipping_cost;
 
-// Fetch shipping address
 $shipping_address = isset($_SESSION['shipping_address']) ? $_SESSION['shipping_address'] : null;
 if (!$shipping_address) {
     error_log("create_session.php: No shipping address for user_id: $user_id");
@@ -103,11 +96,9 @@ if (!$shipping_address) {
     exit;
 }
 
-// === CREATE ORDER + ORDER ITEMS WITH CORRECT FIELDS ===
 try {
     $pdo->beginTransaction();
 
-    // Insert into orders with full financial data
     $stmt = $pdo->prepare("
         INSERT INTO orders 
         (user_id, total_amount, shipping_cost, discount_amount, payment_status, shipping_address, created_at) 
@@ -122,7 +113,6 @@ try {
     ]);
     $order_id = $pdo->lastInsertId();
 
-    // Insert order items with price_at_order
     $stmt = $pdo->prepare("
         INSERT INTO order_items 
         (order_id, product_id, quantity, price_at_order, price_at_purchase, 
@@ -131,7 +121,7 @@ try {
     ");
 
     foreach ($cart_items as $item) {
-        $price_at_order = $item['price']; // Original price at cart time
+        $price_at_order = $item['price']; 
         $stmt->execute([
             $order_id,
             $item['product_id'],
@@ -143,24 +133,21 @@ try {
         ]);
     }
 
-    // Create Stripe Checkout session
     $session = Session::create([
         'payment_method_types' => ['card'],
         'line_items' => $line_items,
         'mode' => 'payment',
-        'success_url' => 'https://elite.kalonoid.com/success.php?session_id={CHECKOUT_SESSION_ID}',
-        'cancel_url' => 'https://elite.kalonoid.com/cart.php',
+        'success_url' => 'https://domain/success.php?session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => 'https://domain/cart.php',
         'metadata' => ['order_id' => $order_id],
         'shipping_address_collection' => ['allowed_countries' => ['US', 'GR']],
     ]);
 
-    // Update order with Stripe session ID
     $stmt = $pdo->prepare("UPDATE orders SET stripe_session_id = ? WHERE id = ?");
     $stmt->execute([$session->id, $order_id]);
 
     $pdo->commit();
 
-    // Clear cart
     $stmt = $pdo->prepare("DELETE FROM cart WHERE user_id = ?");
     $stmt->execute([$user_id]);
 
