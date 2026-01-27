@@ -7,14 +7,12 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// === HANDLE AJAX ACTIONS ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     
     try {
         $pdo->beginTransaction();
 
-        // === DELETE NEWS ===
         if ($_POST['action'] === 'delete' && !empty($_POST['id'])) {
             $id = (int)$_POST['id'];
             $stmt = $pdo->prepare("SELECT image FROM news WHERE id = ?");
@@ -30,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        // === CREATE NEWS ===
         if ($_POST['action'] === 'create') {
             $type = trim($_POST['type'] ?? '');
             $title = trim($_POST['title'] ?? '');
@@ -107,7 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Fetch news
 try {
     $stmt = $pdo->query("SELECT * FROM news ORDER BY publication_datetime DESC");
     $news_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -167,7 +163,6 @@ try {
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar - Desktop -->
         <aside class="sidebar hidden lg:block lg:w-64 bg-sidebar-bg text-white">
             <div class="flex flex-col h-full">
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
@@ -234,9 +229,7 @@ try {
             </div>
         </aside>
 
-        <!-- Main Content -->
         <div class="flex-1 overflow-auto">
-            <!-- Top Bar -->
             <header class="bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 py-4">
                     <div class="flex items-center">
@@ -337,7 +330,6 @@ try {
         </div>
     </div>
 
-    <!-- Mobile Menu -->
     <div id="mobile-menu" class="fixed inset-0 z-50 hidden">
         <div class="mobile-menu-backdrop absolute inset-0" id="backdrop"></div>
         <div class="absolute left-0 top-0 bottom-0 w-64 bg-sidebar-bg text-white transform transition-transform duration-300 -translate-x-full" id="mobile-sidebar">
@@ -367,7 +359,6 @@ try {
         </div>
     </div>
 
-    <!-- Create Modal -->
     <div id="createModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
             <h3 class="text-lg font-semibold mb-4">Create News Post</h3>
@@ -399,7 +390,6 @@ try {
         </div>
     </div>
 
-    <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
             <h3 class="text-lg font-semibold mb-4">Edit News Post</h3>
@@ -437,7 +427,6 @@ try {
     </div>
 
     <script>
-        // Mobile Menu
         document.getElementById('mobile-menu-button').addEventListener('click', () => {
             document.getElementById('mobile-menu').classList.remove('hidden');
             setTimeout(() => document.getElementById('mobile-sidebar').classList.remove('-translate-x-full'), 10);
@@ -449,7 +438,6 @@ try {
             setTimeout(() => document.getElementById('mobile-menu').classList.add('hidden'), 300);
         }
 
-        // User Dropdown
         document.getElementById('user-menu-button').addEventListener('click', () => {
             document.getElementById('user-dropdown').classList.toggle('hidden');
         });
@@ -459,7 +447,6 @@ try {
             if (!button.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden');
         });
 
-        // Modals
         function openCreateModal() {
             document.getElementById('createModal').classList.remove('hidden');
         }
@@ -483,7 +470,6 @@ try {
             document.getElementById('editModal').classList.add('hidden');
         }
 
-        // Create Form
         document.getElementById('createForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('create-submit-btn');
@@ -514,7 +500,6 @@ try {
                 });
         });
 
-        // Edit Form
         document.getElementById('editForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('edit-submit-btn');
@@ -539,7 +524,6 @@ try {
                 });
         });
 
-        // Delete
         function deleteNews(id) {
             if (!confirm('Delete this news post?')) return;
             fetch(window.location.href, {

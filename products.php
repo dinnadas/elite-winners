@@ -2,13 +2,11 @@
 session_start();
 require_once 'config.php';
 
-// Check if admin is logged in
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// Handle form submissions for add/edit/delete/toggle visibility
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         try {
@@ -22,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stock = (int)$_POST['stock'];
                 $is_visible = isset($_POST['is_visible']) ? 1 : 0;
 
-                // Handle image upload
                 $image_path = $_POST['existing_image'] ?? '';
                 if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                     $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
@@ -34,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $upload_dir = 'uploads/';
                     $target_file = $upload_dir . $file_name;
 
-                    // Validate file
                     if (!in_array($file_type, $allowed_types)) {
                         throw new Exception("Only JPG, JPEG, and PNG files are allowed.");
                     }
@@ -42,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception("File size exceeds 5MB limit.");
                     }
 
-                    // Move uploaded file
                     if (move_uploaded_file($file_tmp, $target_file)) {
                         $image_path = $target_file;
                     } else {
@@ -50,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // Handle chips
                 $chip_groups = $_POST['chip_groups'] ?? [];
 
                 if ($_POST['action'] === 'add') {
@@ -58,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $description, $price, $label, $image_path, $discount_percent, $shipping_price, $stock, $is_visible]);
                     $product_id = $pdo->lastInsertId();
 
-                    // Save chip options
                     foreach ($chip_groups as $group) {
                         $chip_title = trim($group['title'] ?? '');
                         $chip_values = $group['values'] ?? [];
@@ -79,11 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("UPDATE products SET title = ?, description = ?, price = ?, label = ?, image = ?, discount_percent = ?, shipping_price = ?, stock = ?, is_visible = ? WHERE id = ?");
                     $stmt->execute([$title, $description, $price, $label, $image_path, $discount_percent, $shipping_price, $stock, $is_visible, $id]);
 
-                    // Delete existing chip options
                     $stmt = $pdo->prepare("DELETE FROM product_chip_options WHERE product_id = ?");
                     $stmt->execute([$id]);
 
-                    // Save updated chip options
                     foreach ($chip_groups as $group) {
                         $chip_title = trim($group['title'] ?? '');
                         $chip_values = $group['values'] ?? [];
@@ -102,14 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } elseif ($_POST['action'] === 'delete' && isset($_POST['id'])) {
                 $id = (int)$_POST['id'];
-                // Delete image file
                 $stmt = $pdo->prepare("SELECT image FROM products WHERE id = ?");
                 $stmt->execute([$id]);
                 $product = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($product['image'] && file_exists($product['image'])) {
                     unlink($product['image']);
                 }
-                // Delete product and associated chips (ON DELETE CASCADE)
                 $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
                 $stmt->execute([$id]);
             } elseif ($_POST['action'] === 'toggle_visibility' && isset($_POST['id'])) {
@@ -126,12 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all products and their chips
 try {
     $stmt = $pdo->query("SELECT DISTINCT p.* FROM products p ORDER BY p.created_at DESC");
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Fetch chip options for each product
     $chip_options = [];
     foreach ($products as $product) {
         $stmt = $pdo->prepare("SELECT chip_title, option_value, additional_price FROM product_chip_options WHERE product_id = ? ORDER BY chip_title, option_value");
@@ -149,7 +136,6 @@ try {
     $error = "Error fetching products: " . $e->getMessage();
 }
 
-// For edit mode, fetch the product
 $editProduct = null;
 if (isset($_GET['edit'])) {
     $id = (int)$_GET['edit'];
@@ -170,11 +156,8 @@ if (isset($_GET['edit'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Products - EliteWinnersWorldwide</title>
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=stylesheet">
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -258,19 +241,15 @@ if (isset($_GET['edit'])) {
     </style>
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
-    <!-- Dashboard Container -->
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar - Desktop -->
         <aside class="sidebar hidden lg:block lg:w-64 bg-sidebar-bg text-white">
             <div class="flex flex-col h-full">
-                <!-- Logo -->
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
                     <div class="flex items-center">
                         <img class="logo" src="logo.png" alt="logo">
                         <span class="text-xl font-heading font-bold">EliteWinners</span>
                     </div>
                 </div>
-                <!-- Navigation -->
                 <nav class="flex-1 px-4 py-6 overflow-y-auto">
                     <ul class="space-y-2">
                         <li>
@@ -343,7 +322,6 @@ if (isset($_GET['edit'])) {
                             </a>
                         </li>
                     </ul>
-                    <!-- Bottom section -->
                     <div class="mt-10 pt-6 border-t border-gray-700">
                         <a href="#" class="flex items-center px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -356,12 +334,9 @@ if (isset($_GET['edit'])) {
             </div>
         </aside>
 
-        <!-- Main Content -->
         <div class="flex-1 overflow-auto">
-            <!-- Top Bar -->
             <header class="bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 py-4">
-                    <!-- Left section -->
                     <div class="flex items-center">
                         <button id="mobile-menu-button" class="lg:hidden text-gray-500 mr-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -375,7 +350,6 @@ if (isset($_GET['edit'])) {
                             </svg>
                         </div>
                     </div>
-                    <!-- Right section -->
                     <div class="flex items-center space-x-4">
                         <button class="relative p-1 text-gray-500 hover:text-eww-dark">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -394,7 +368,6 @@ if (isset($_GET['edit'])) {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <!-- User dropdown -->
                             <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-10 border border-gray-200">
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
@@ -406,29 +379,24 @@ if (isset($_GET['edit'])) {
                 </div>
             </header>
 
-            <!-- Main Content Area -->
             <main class="p-6">
-                <!-- Page Title -->
                 <div class="mb-6">
                     <h1 class="text-2xl font-heading font-bold">Products Management</h1>
                     <p class="text-gray-600">Manage your products here.</p>
                 </div>
 
-                <!-- Error Message -->
                 <?php if (isset($error)): ?>
                     <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
                         <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
 
-                <!-- Add Product Button -->
                 <div class="mb-6">
                     <button id="add-product-btn" class="bg-eww-green text-white px-6 py-3 rounded-lg font-medium hover:bg-eww-dark transition-colors">
                         Add Product
                     </button>
                 </div>
 
-                <!-- Product Form Section (hidden by default) -->
                 <div id="product-form-section" class="hidden bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
                     <h2 class="text-lg font-semibold mb-4"><?php echo $editProduct ? 'Edit Product' : 'Add New Product'; ?></h2>
                     <form method="POST" action="products.php" enctype="multipart/form-data">
@@ -484,7 +452,6 @@ if (isset($_GET['edit'])) {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                             <textarea name="description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-eww-green focus:border-eww-green" rows="4" required><?php echo htmlspecialchars($editProduct['description'] ?? ''); ?></textarea>
                         </div>
-                        <!-- Chips Section -->
                         <div class="mt-4">
                             <button type="button" id="add-chips-btn" class="bg-eww-gold text-white px-4 py-2 rounded-lg font-medium hover:bg-eww-dark transition-colors">
                                 Add Chips
@@ -575,7 +542,6 @@ if (isset($_GET['edit'])) {
                     </form>
                 </div>
 
-                <!-- Products Table -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100">
                     <div class="px-6 py-4 border-b border-gray-100">
                         <h2 class="text-lg font-semibold">Products List</h2>
@@ -663,7 +629,6 @@ if (isset($_GET['edit'])) {
         </div>
     </div>
 
-    <!-- Mobile Menu (hidden by default) -->
     <div id="mobile-menu" class="fixed inset-0 z-50 hidden">
         <div class="mobile-menu-backdrop absolute inset-0 bg-black opacity-50" id="backdrop"></div>
         <div class="absolute left-0 top-0 bottom-0 w-64 bg-sidebar-bg text-white transform transition-transform duration-300 ease-in-out -translate-x-full" id="mobile-sidebar">
@@ -696,10 +661,8 @@ if (isset($_GET['edit'])) {
         </div>
     </div>
 
-    <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu functionality
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
             const mobileSidebar = document.getElementById('mobile-sidebar');
@@ -724,7 +687,6 @@ if (isset($_GET['edit'])) {
             closeMobileMenu.addEventListener('click', closeMobileMenuFunc);
             backdrop.addEventListener('click', closeMobileMenuFunc);
 
-            // User dropdown functionality
             const userMenuButton = document.getElementById('user-menu-button');
             const userDropdown = document.getElementById('user-dropdown');
 
@@ -738,7 +700,6 @@ if (isset($_GET['edit'])) {
                 }
             });
 
-            // Add Product Button and Form Toggle
             const addProductBtn = document.getElementById('add-product-btn');
             const productFormSection = document.getElementById('product-form-section');
             const cancelFormBtn = document.getElementById('cancel-form');
@@ -788,14 +749,12 @@ if (isset($_GET['edit'])) {
                 }
             });
 
-            // Add Chips Button
             const addChipsBtn = document.getElementById('add-chips-btn');
             const chipsSection = document.getElementById('chips-section');
             addChipsBtn.addEventListener('click', function() {
                 chipsSection.classList.remove('hidden');
             });
 
-            // Add Chip Group Button
             let chipGroupCounter = <?php echo $editProduct && !empty($editProduct['chip_options']) ? count($chip_groups) + 1 : 2; ?>;
             document.getElementById('add-chip-group-btn').addEventListener('click', function() {
                 const chipsContainer = document.getElementById('chips-container');
@@ -868,7 +827,6 @@ if (isset($_GET['edit'])) {
                 }
             });
 
-            // If in edit mode, show form automatically
             <?php if ($editProduct): ?>
                 productFormSection.classList.remove('hidden');
                 <?php if (!empty($editProduct['chip_options'])): ?>

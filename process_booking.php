@@ -1,19 +1,17 @@
 <?php
 header('Content-Type: application/json');
-include 'config.php'; // Include database connection
-require 'vendor/autoload.php'; // Include PHPMailer
+include 'config.php'; 
+require 'vendor/autoload.php'; 
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 try {
-    // Check if the request is POST
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         echo json_encode(['success' => false, 'message' => 'Invalid request method']);
         exit;
     }
 
-    // Retrieve and sanitize form data
     $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
     $age = filter_input(INPUT_POST, 'age', FILTER_SANITIZE_NUMBER_INT);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
@@ -22,7 +20,6 @@ try {
     $preferred_date = filter_input(INPUT_POST, 'preferred-date', FILTER_SANITIZE_STRING);
     $notes = filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_STRING);
 
-    // Basic server-side validation
     if (empty($name) || empty($age) || empty($email) || empty($session_type)) {
         echo json_encode(['success' => false, 'message' => 'Required fields are missing']);
         exit;
@@ -38,17 +35,14 @@ try {
         exit;
     }
 
-    // Validate session type
     $valid_sessions = ['one-on-one', 'group', 'goalkeeper', 'pro'];
     if (!in_array($session_type, $valid_sessions)) {
         echo json_encode(['success' => false, 'message' => 'Invalid session type']);
         exit;
     }
 
-    // Format session type for display
     $session_display = ucwords(str_replace('-', ' ', $session_type));
 
-    // Prepare and execute database insertion
     $stmt = $pdo->prepare("
         INSERT INTO bookings (name, age, email, phone, session_type, preferred_date, notes)
         VALUES (:name, :age, :email, :phone, :session_type, :preferred_date, :notes)
@@ -64,25 +58,19 @@ try {
         'notes' => $notes ?: null
     ]);
 
-    // Initialize PHPMailer
     $mail = new PHPMailer(true);
 
-    // SMTP Configuration
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'kalonoidcom@gmail.com';
-    $mail->Password = 'bglc wcdf rgke heqj';
+    $mail->Username = 'your-email';
+    $mail->Password = 'password';
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port = 587;
 
-    // Sender and Reply-To
-    $mail->setFrom('info@kalonoid.com', 'EliteWinnersWorldwide');
-    $mail->addReplyTo('info@kalonoid.com', 'EliteWinnersWorldwide');
+    $mail->setFrom('info@domain.com', 'EliteWinnersWorldwide');
+    $mail->addReplyTo('info@domain.com', 'EliteWinnersWorldwide');
 
-    // =============================================
-    // EMAIL TO CLIENT - CONFIRMATION
-    // =============================================
     $mail->addAddress($email, $name);
     $mail->isHTML(true);
     $mail->Subject = 'Booking Confirmed! – EliteWinnersWorldwide';
@@ -160,15 +148,9 @@ try {
 
     $mail->AltBody = "Dear $name,\n\nThank you for booking a $session_display session with EliteWinnersWorldwide. We have received your request and will contact you soon to confirm your session details.\n\nBooking Details:\nName: $name\nAge: $age\nEmail: $email\nPhone: " . ($phone ?: 'Not provided') . "\nSession Type: $session_display\nPreferred Date: " . ($preferred_date ?: 'Not specified') . "\nNotes: " . ($notes ?: 'None') . "\n\nWe look forward to helping you achieve your breakthrough!\n\nBest regards,\nEliteWinnersWorldwide Team";
 
-    // Send email to user
     $mail->send();
 
-    // Clear recipients for admin email
     $mail->clearAddresses();
-
-    // =============================================
-    // EMAIL TO ADMIN - NOTIFICATION
-    // =============================================
     $mail->addAddress('dinaolenku@gmail.com', 'Admin');
     $mail->Subject = 'New Booking Request – EliteWinnersWorldwide';
 
@@ -230,10 +212,8 @@ try {
 
     $mail->AltBody = "New Booking Request\n\nA new booking request has been submitted.\n\nBooking Details:\nName: $name\nAge: $age\nEmail: $email\nPhone: " . ($phone ?: 'Not provided') . "\nSession Type: $session_display\nPreferred Date: " . ($preferred_date ?: 'Not specified') . "\nNotes: " . ($notes ?: 'None') . "\n\nPlease review and follow up with the client.\n\nBest regards,\nEliteWinnersWorldwide System";
 
-    // Send email to admin
     $mail->send();
 
-    // Return success response
     echo json_encode(['success' => true, 'message' => 'Booking request submitted successfully! Check your email.']);
 
 } catch (Exception $e) {

@@ -2,10 +2,8 @@
 include 'config.php';
 session_start();
 
-// === VISITOR TRACKING START ===
 if (isset($pdo) && $pdo instanceof PDO) {
     try {
-        // 1. Get real IP
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
             $list = array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']));
@@ -17,9 +15,8 @@ if (isset($pdo) && $pdo instanceof PDO) {
         }
 
         $today = date('Y-m-d');
-        $now   = date('Y-m-d H:i:s'); // Full timestamp
+        $now   = date('Y-m-d H:i:s');
 
-        // 2. Get Country (Free API - no key needed)
         $country = 'Unknown';
         if ($ip !== '127.0.0.1' && $ip !== '::1') {
             $context = stream_context_create(['http' => ['timeout' => 2]]);
@@ -32,17 +29,14 @@ if (isset($pdo) && $pdo instanceof PDO) {
             }
         }
 
-        // 3. Optional: User Agent
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
 
-        // 4. Check if already logged today
         $check = $pdo->prepare(
             "SELECT 1 FROM site_visitors WHERE ip_address = ? AND visit_date = ? LIMIT 1"
         );
         $check->execute([$ip, $today]);
 
         if ($check->fetchColumn() === false) {
-            // 5. Insert full record
             $insert = $pdo->prepare(
                 "INSERT INTO site_visitors 
                  (ip_address, visit_date, visit_time, country, user_agent) 
@@ -54,28 +48,22 @@ if (isset($pdo) && $pdo instanceof PDO) {
         error_log('Visitor tracking error: ' . $e->getMessage());
     }
 }
-// === VISITOR TRACKING END ===
 
-// Check if user is logged in
 $is_logged_in = isset($_SESSION['user_id']);
-// Handle logout
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
     session_destroy();
     header("Location: register.php");
     exit;
 }
-// Handle add to cart
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart']) && $is_logged_in) {
     try {
         $product_id = (int)$_POST['product_id'];
         $user_id = (int)$_SESSION['user_id'];
         $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
-        // Validate quantity
         if ($quantity < 1) {
             header("Location: index.php?status=error&message=" . urlencode("Invalid quantity."));
             exit;
         }
-        // Check if the product exists and is in stock
         $stmt = $pdo->prepare("SELECT id, stock FROM products WHERE id = ? AND is_visible = 1");
         $stmt->execute([$product_id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -83,20 +71,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart']) && $is
             header("Location: index.php?status=error&message=" . urlencode("Product not found or unavailable."));
             exit;
         }
-        // Check stock availability
         if ($product['stock'] > 0 && $quantity > $product['stock']) {
             $pdo->rollBack();
             header("Location: index.php?status=error&message=" . urlencode("Requested quantity exceeds available stock."));
             exit;
         }
-        // Begin transaction
         $pdo->beginTransaction();
-        // Check if the product already exists in the user's cart
         $stmt = $pdo->prepare("SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?");
         $stmt->execute([$user_id, $product_id]);
         $existing_cart_item = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($existing_cart_item) {
-            // Update quantity if item exists
             $new_quantity = $existing_cart_item['quantity'] + $quantity;
             if ($product['stock'] > 0 && $new_quantity > $product['stock']) {
                 $pdo->rollBack();
@@ -106,11 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart']) && $is
             $stmt = $pdo->prepare("UPDATE cart SET quantity = ? WHERE id = ?");
             $stmt->execute([$new_quantity, $existing_cart_item['id']]);
         } else {
-            // Insert new cart item
             $stmt = $pdo->prepare("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)");
             $stmt->execute([$user_id, $product_id, $quantity]);
         }
-        // Commit transaction
         $pdo->commit();
         header("Location: index.php?status=success&message=" . urlencode("Item added to cart successfully."));
         exit;
@@ -125,27 +107,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart']) && $is
         exit;
     }
 }
-// Fetch cart count for logged-in user
 $cart_count = 0;
 if ($is_logged_in) {
     $stmt = $pdo->prepare("SELECT SUM(quantity) as total FROM cart WHERE user_id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $cart_count = (int)$stmt->fetchColumn();
    
-    // Fetch user data for profile
     $stmt = $pdo->prepare("SELECT first_name FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
     $user_initial = strtoupper(substr($user['first_name'] ?? '', 0, 1));
 }
-// Handle status messages from redirect
 $status_message = '';
 $status = '';
 if (isset($_GET['status']) && isset($_GET['message'])) {
     $status = $_GET['status'];
     $status_message = urldecode($_GET['message']);
 }
-// Fetch products from database
 $stmt = $pdo->prepare("SELECT id, image, title, description, price, label, discount_percent FROM products WHERE is_visible = 1");
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -157,20 +135,15 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EliteWinnersWorldwide - Professional Soccer Training & Apparel</title>
     <meta name="description" content="World-class soccer training programs and premium apparel. Where talent meets breakthrough.">
-    <!-- OpenGraph meta tags -->
     <meta property="og:title" content="EliteWinnersWorldwide - Professional Soccer Training">
     <meta property="og:description" content="World-class soccer training programs and premium apparel.">
     <meta property="og:image" content="https://example.com/elitewinners-preview.jpg">
     <meta property="og:url" content="https://elitewinnersworldwide.com">
     <meta property="og:type" content="website">
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-    <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -254,15 +227,12 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body class="bg-eww-light text-eww-dark font-body antialiased">
-    <!-- Header / Navigation -->
     <header class="fixed w-full z-50 transition-all duration-300" id="header">
         <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <!-- Logo -->
             <a href="#" class="flex items-center space-x-2 z-60">
                 <img class="logo" src="logo.png" alt="logo">
                 <span class="text-white font-heading font-bold text-xl hidden md:block">EliteWinnersWorldwide</span>
             </a>
-            <!-- Desktop Navigation -->
             <div class="hidden md:flex items-center space-x-8">
                 <a href="#home" class="text-white hover:text-eww-gold transition-colors">Home</a>
                 <a href="#services" class="text-white hover:text-eww-gold transition-colors">Services</a>
@@ -295,7 +265,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <a href="register.php" class="bg-eww-gold text-eww-dark px-4 py-2 rounded-2xl font-semibold hover:bg-opacity-90 transition-all ml-4">Sign Up</a>
                 <?php endif; ?>
             </div>
-            <!-- Mobile right side: cart and menu -->
             <div class="flex items-center space-x-4 md:hidden z-60">
                 <a href="cart.php" class="text-white relative" aria-label="Shopping cart">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -310,7 +279,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </button>
             </div>
         </nav>
-        <!-- Mobile Navigation -->
         <div class="fixed top-0 left-0 bottom-0 w-80 bg-eww-dark z-50 transform -translate-x-full transition-transform duration-300 md:hidden overflow-y-auto" id="mobile-menu">
             <div class="p-6 flex flex-col h-full">
                 <button id="close-mobile-menu" class="absolute top-4 right-4 text-white hover:text-eww-gold transition-colors z-10">
@@ -343,7 +311,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden modal-blur"></div>
     </header>
-    <!-- Hero Section -->
     <section id="home" class="relative h-screen flex items-center justify-center bg-eww-dark overflow-hidden">
         <div class="absolute inset-0 z-0">
             <div class="absolute inset-0 hero-gradient z-10"></div>
@@ -376,8 +343,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </a>
         </div>
     </section>
-    <!-- [Rest of the sections remain exactly the same - News, Services, Products, About, Booking, Testimonials, Footer, Status Modal] -->
-    <!-- News Section -->
 <section id="news" class="py-20 bg-eww-light">
     <div class="container mx-auto px-4">
         <div class="text-center mb-16">
@@ -468,7 +433,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </section>
 
-<!-- News Modal -->
 <div id="newsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 modal-blur">
     <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-screen overflow-y-auto">
         <div class="relative">
@@ -491,7 +455,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 </div>
-    <!-- Services Section -->
     <section id="services" class="py-20 bg-white">
         <div class="container mx-auto px-4">
             <div class="text-center mb-16">
@@ -634,7 +597,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </section>
-    <!-- Products Section -->
     <section id="shop" class="py-20 bg-eww-light">
         <div class="container mx-auto px-4">
             <div class="text-center mb-16">
@@ -699,7 +661,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </section>
-    <!-- About Section -->
     <section id="about" class="py-20 bg-white">
         <div class="container mx-auto px-4">
             <div class="flex flex-col lg:flex-row items-center gap-12">
@@ -744,7 +705,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </section>
-    <!-- Booking Section -->
     <section id="booking" class="py-20 bg-eww-green">
         <div class="container mx-auto px-4">
             <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -836,7 +796,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </section>
-    <!-- Testimonials Section -->
     <section id="testimonials" class="py-20 bg-eww-light">
         <div class="container mx-auto px-4">
             <div class="text-center mb-16">
@@ -914,7 +873,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </section>
-    <!-- Footer -->
     <footer class="bg-eww-dark text-white py-12">
         <div class="container mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -993,7 +951,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </footer>
-    <!-- Status Modal -->
     <?php if ($status_message): ?>
         <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-blur">
             <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
@@ -1011,9 +968,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     <?php endif; ?>
-    <!-- JavaScript -->
     <script>
-    // Header scroll effect with blur
     const header = document.getElementById('header');
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) {
@@ -1022,7 +977,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             header.classList.remove('scrolled');
         }
     });
-    // Mobile menu toggle
     const mobileMenuButton = document.getElementById('mobile-menu-button');
     const mobileMenu = document.getElementById('mobile-menu');
     const closeMobileMenu = document.getElementById('close-mobile-menu');
@@ -1043,7 +997,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             mobileOverlay.classList.add('hidden');
         });
     }
-    // Close mobile menu when clicking a link or logout button
     mobileMenu.querySelectorAll('a, button[type="submit"]').forEach(el => {
         el.addEventListener('click', () => {
             mobileMenu.classList.add('-translate-x-full');
@@ -1079,29 +1032,22 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         document.getElementById('newsModal').classList.add('hidden');
     }
 
-    // Close modal when clicking backdrop
     document.getElementById('newsModal').addEventListener('click', function(e) {
         if (e.target === this) closeNewsModal();
     });
 
-
-
-
-    // Profile dropdown toggle
     const profileButton = document.getElementById('profile-button');
     const profileDropdown = document.getElementById('profile-dropdown');
     if (profileButton && profileDropdown) {
         profileButton.addEventListener('click', () => {
             profileDropdown.classList.toggle('active');
         });
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
                 profileDropdown.classList.remove('active');
             }
         });
     }
-    // Testimonial slider
     const slider = document.getElementById('testimonial-slider');
     const sliderControls = document.querySelectorAll('.slider-control');
     let currentSlide = 0;
@@ -1113,7 +1059,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             slider.style.transform = `translateX(-${currentSlide * 100}%)`;
         });
     });
-    // Booking form submission
     const bookingForm = document.getElementById('booking-form');
     const submitButton = document.getElementById('submit-button');
     const buttonText = document.getElementById('button-text');
@@ -1159,7 +1104,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         }
     }
-    // Status modal close
     const statusModal = document.getElementById('status-modal');
     const closeModalButton = document.getElementById('close-modal');
     if (statusModal && closeModalButton) {
@@ -1167,7 +1111,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             statusModal.classList.add('hidden');
         });
     }
-    // Lazy load images
     const images = document.querySelectorAll('img[data-src]');
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -1180,7 +1123,6 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         });
     }, { rootMargin: '0px 0px 200px 0px' });
     images.forEach(img => observer.observe(img));
-    // Add to cart form submission
     const addToCartForms = document.querySelectorAll('.add-to-cart-form');
     addToCartForms.forEach(form => {
         form.addEventListener('submit', async (e) => {
@@ -1196,13 +1138,11 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     body: formData
                 });
                 if (response.ok) {
-                    // Update cart count dynamically
                     const cartCountElement = document.getElementById('cart-count');
                     if (cartCountElement) {
                         const currentCount = parseInt(cartCountElement.textContent) || 0;
                         cartCountElement.textContent = currentCount + 1;
                     }
-                    // Trigger status modal without reload (optional, if you prefer no reload)
                     const statusModal = document.getElementById('status-modal');
                     if (statusModal) {
                         statusModal.classList.remove('hidden');
@@ -1213,7 +1153,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         statusTitle.classList.remove('text-red-600');
                         statusMessage.textContent = 'Item added to cart successfully.';
                     } else {
-                        window.location.reload(); // Fallback to reload if modal isn't present
+                        window.location.reload(); 
                     }
                 } else {
                     throw new Error('Server responded with status: ' + response.status);
