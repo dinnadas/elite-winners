@@ -247,7 +247,7 @@ if (isset($_GET['edit'])) {
                 <div class="flex items-center justify-center h-20 px-6 border-b border-gray-700">
                     <div class="flex items-center">
                         <img class="logo" src="logo.png" alt="logo">
-                        <span class="text-xl font-heading font-bold">EliteWinners</span>
+                        <span class="text-xl font-heading font-bold">EliteWinners W</span>
                     </div>
                 </div>
                 <nav class="flex-1 px-4 py-6 overflow-y-auto">
